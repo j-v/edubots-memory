@@ -1,0 +1,12 @@
+{
+  "name": "edubotics",
+	"version": "0.0.1",
+  "description": "",
+  "author": "Edubotics",
+  "dependencies": {
+	    "express": ">= 1.2.0",
+      "coffee-script": "1.2.x",
+			"now": "0.8.1"
+	  },
+  "engine": "node 0.6.3"
+}
