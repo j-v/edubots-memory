@@ -209,7 +209,11 @@
         }
       }
     };
-    return $(Game.canvas).click(clickListener);
+    if (root.isIpad) {
+      return $(Game.canvas)[0].ontouchstart = clickListener;
+    } else {
+      return $(Game.canvas).click(clickListener);
+    }
   };
 
   Game._listeners = {};

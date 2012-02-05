@@ -201,8 +201,10 @@ Game.initEvents = () ->
     # $(Game.canvas).onTouchStart clickListener
     #  else 
     
-  $(Game.canvas).click clickListener
-
+  if root.isIpad
+    $(Game.canvas)[0].ontouchstart = clickListener
+  else
+    $(Game.canvas).click clickListener
 
 # Event Emitter
 Game._listeners = {}
