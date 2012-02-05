@@ -17,14 +17,15 @@ root.loadImage = (img_file, callback) ->
 
 root.Game = Game = {}
 
-# GAME PARAMS
-GAME_DEFAULT_WIDTH = 4
-GAME_DEFAULT_HEIGHT = 3 
+# GAME PARAS
+GAME_DEFAULT_WIDTH = 5
+GAME_DEFAULT_HEIGHT = 4 
 GAME_BG_TILE_IMG = "bg.png"
-Game.tileWidth = 100
-Game.tileHeight = 100
+Game.tileWidth = 150
+Game.tileHeight = 150
 Game.fps = 15
 Game.tilePad = 20
+Game.tileAnimDuration = 1000
 # ----------
 
 GAME_STATE_TURN = 0
@@ -32,7 +33,9 @@ GAME_STATE_CHECKING = 1
 GAME_STATE_WON = 2
 GAME_STATE_WAIT = 3
 
+
 Game.init = (canvas, params = {} ) ->
+  Game._lastUpdate = (new Date).getTime()
 
   Game.canvas = canvas
   Game.initEvents()
@@ -54,9 +57,10 @@ Game.new = () ->
   Game.tile1 = null
   Game.tile2 = null
   Game.tileClasses = [
-    new root.TileClass('tile1.png'),
-    new root.TileClass('tile2.png'),
-    new root.TileClass('tile3.png')
+    new root.TileClass('t1.png'),
+    new root.TileClass('t2.png'),
+    new root.TileClass('t3.png'),
+    new root.TileClass('t4.png')
   ]
 
   # put together the board
@@ -68,22 +72,55 @@ Game.new = () ->
     curTileIndex += 1
     curTileIndex = 0 if curTileIndex == Game.tileClasses.length
   Game.tiles = shuffle(tiles)
+
+  Game.state = GAME_STATE_TURN
   
 Game.getTile = (x,y) ->
   return Game.tiles[y*Game.width + x]
   
 Game.draw = () ->
+  time = (new Date).getTime()
+
   Game.ctx.clearRect 0, 0, Game.canvas.width, Game.canvas.height
   pad = Game.tilePad
   for x in [0..Game.width - 1]
     for y in [0..Game.height - 1]
       tile = Game.getTile(x,y)
-      if tile.turned
-        Game.ctx.drawImage tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth,
-          pad + ((Game.tileWidth + pad) * x), pad + ((Game.tileHeight + pad) * y), Game.tileHeight, Game.tileWidth
+      if not tile.anim?
+        if tile.turned
+          Game.ctx.drawImage tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth,
+            pad + ((Game.tileWidth + pad) * x), pad + ((Game.tileHeight + pad) * y), Game.tileHeight, Game.tileWidth
+        else
+          Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth,
+            pad + ((Game.tileWidth + pad) * x), pad + ((Game.tileHeight + pad) * y), Game.tileHeight, Game.tileWidth
       else
-        Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth,
-          pad + ((Game.tileWidth + pad) * x), pad + ((Game.tileHeight + pad) * y), Game.tileHeight, Game.tileWidth
+        elapsed = time - tile.anim.start
+        if tile.anim.type == 'turn'
+          if elapsed < (Game.tileAnimDuration / 2)
+            fraction = elapsed / (Game.tileAnimDuration / 2)
+            renderWidth = (1-fraction) * Game.tileWidth
+            Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight,
+              Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2,
+              pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+          else
+            fraction = elapsed / (Game.tileAnimDuration / 2 ) - 1
+            renderWidth = (fraction) * Game.tileWidth
+            Game.ctx.drawImage tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth,
+              pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+              # else if tile.anim.type == 'return'
+              #   if elapsed < (Game.tileAnimDuration / 2)
+              #     fraction = elapsed / (Game.tileAnimDuration / 2)
+              #     renderWidth = (1-fraction) * Game.tileWidth
+              #     Game.ctx.drawImage tile.tileClass.image,, 0, 0, Game.tileHeight,
+              #       Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+              #   else
+              #     fraction = elapsed / (Game.tileAnimDuration / 2 ) - 1
+              #     renderWidth = (fraction) * Game.tileWidth
+              #     Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth,
+              #       pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2,  pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+
+      if elapsed > Game.tileAnimDuration
+        tile.anim = null
 
 
 Game.start = () ->
@@ -91,7 +128,6 @@ Game.start = () ->
     # Start the game loop
     Game._intervalId = setInterval Game.run, 1000 / Game.fps
     Game.started = true
-    Game.state = GAME_STATE_TURN
 
 Game.stop = () ->
   if Game.started
@@ -102,6 +138,7 @@ Game.stop = () ->
 Game.run = () ->
   #Game.update()
   Game.draw()
+  Game._lastUpdate = (new Date).getTime()
 
  getPosition = (e) ->
   e = window.event if not e?
@@ -115,9 +152,14 @@ Game.run = () ->
   {x: x, y: y}
 
 Game.initEvents = () ->
-  $(Game.canvas).click (ev) ->
+  # $(Game.canvas).click (ev) ->
+  clickListener = (ev) ->
       if Game.started and Game.state != GAME_STATE_WAIT
         {x, y} = getPosition(ev)
+        if x > Game.tilePad + Game.width * (Game.tileWidth+Game.tilePad) or y > Game.tilePad + Game.height * (Game.tileHeight+Game.tilePad)
+          return #  click out of bounds
+
+
         tileX = Math.floor(x/(Game.tileWidth+Game.tilePad))
         tileY = Math.floor(y/(Game.tileHeight+Game.tilePad))
         tile = Game.getTile(tileX,tileY)
@@ -127,9 +169,11 @@ Game.initEvents = () ->
         else if not Game.tile1?
           Game.tile1 = tile
           tile.turned = true 
+          tile.anim = {type:'turn', start: (new Date).getTime()}
         else # choose tile2
           Game.tile2 = tile
           tile.turned = true
+          tile.anim = {type:'turn', start: (new Date).getTime()}
 
           if Game.tile1.tileClass == Game.tile2.tileClass  # MATCH
             Game._matchesLeft -= 1
@@ -148,8 +192,16 @@ Game.initEvents = () ->
               Game.state = GAME_STATE_TURN
               Game.tile1 = null
               Game.tile2 = null
-            setTimeout newTurn, 1000
+            setTimeout newTurn, 1800
+ 
 
+  # if root.isIpad 
+    # alert('ipad mode')
+    # if root.detectIphoneOrIpod()
+    # $(Game.canvas).onTouchStart clickListener
+    #  else 
+    
+  $(Game.canvas).click clickListener
 
 
 # Event Emitter

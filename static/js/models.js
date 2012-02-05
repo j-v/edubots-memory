@@ -8,6 +8,7 @@
     function Tile(tileClass) {
       this.tileClass = tileClass;
       this.turned = false;
+      this.anim = null;
     }
 
     return Tile;

@@ -6,15 +6,16 @@
   root = window;
 
   victory = function(game) {
-    return root.location = 'robo:openbeak';
+    root.location = 'robo:victory';
+    return setTimeout(root.Game["new"](), 1500);
   };
 
   match = function(game) {
-    return root.location = 'robo:leftwing';
+    return root.location = 'robo:match';
   };
 
   wrong = function(game) {
-    return root.location = 'robo:shake';
+    return root.location = 'robo:wrong';
   };
 
   $.ready = function() {

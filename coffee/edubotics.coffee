@@ -2,16 +2,17 @@ $ = jQuery
 root = window
 
 victory = (game) ->
-  root.location = 'robo:openbeak'
-  # root.location = 'robo:victory'
+  # root.location = 'robo:openbeak'
+  root.location = 'robo:victory'
+  setTimeout root.Game.new(), 1500
 
 match = (game) ->
-  root.location = 'robo:leftwing'
-  # root.location = 'robo:match'
+  #root.location = 'robo:leftwing'
+  root.location = 'robo:match'
 
 wrong = (game) ->
-  root.location = 'robo:shake'
-  # root.location = 'robo:wrong'
+  # root.location = 'robo:shake'
+  root.location = 'robo:wrong'
 
 $.ready = ->
   canvas = $('#myCanvas')[0]

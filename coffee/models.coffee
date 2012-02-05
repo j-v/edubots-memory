@@ -3,6 +3,7 @@ root = window
 root.Tile = class Tile
   constructor: (@tileClass) ->
     @turned = false
+    @anim = null
 
 
 root.TileClass = class TileClass
