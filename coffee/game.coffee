@@ -20,7 +20,7 @@ root.Game = Game = {}
 # GAME PARAS
 GAME_DEFAULT_WIDTH = 5
 GAME_DEFAULT_HEIGHT = 4 
-GAME_BG_TILE_IMG = "bg.png"
+GAME_BG_TILE_IMG = "bg2.png"
 Game.tileWidth = 150
 Game.tileHeight = 150
 Game.fps = 15
@@ -46,14 +46,15 @@ Game.init = (canvas, params = {} ) ->
 
   Game.width = params.width || GAME_DEFAULT_WIDTH
   Game.height = params.height || GAME_DEFAULT_HEIGHT
-  Game._matchesLeft = (Game.width * Game.height)/2
 
   Game.new()
 
 
 Game.new = () ->
+  Game.state = GAME_STATE_WAIT
 
-  Game.started = false
+  Game._matchesLeft = (Game.width * Game.height)/2
+
   Game.tile1 = null
   Game.tile2 = null
   Game.tileClasses = [
@@ -73,7 +74,17 @@ Game.new = () ->
     curTileIndex = 0 if curTileIndex == Game.tileClasses.length
   Game.tiles = shuffle(tiles)
 
-  Game.state = GAME_STATE_TURN
+  # spin board
+  animateTile = (tile, animType) ->
+    tile.animate animType
+  shuffTiles = shuffle((t for t in Game.tiles))
+  for i in [0..shuffTiles.length-1]
+    tile = shuffTiles[i]
+    # setTimeout setAnim, i * 150, tile, {type:'turn',start: (new Date).getTime() + i*150}
+    setTimeout animateTile, i * 150, tile, 'turn'
+    setTimeout animateTile, i * 150 + Game.tileAnimDuration, tile, 'return'
+  
+  setTimeout (() ->  Game.state = GAME_STATE_TURN), shuffTiles.length * 150 + Game.tileAnimDuration
   
 Game.getTile = (x,y) ->
   return Game.tiles[y*Game.width + x]
@@ -107,17 +118,16 @@ Game.draw = () ->
             renderWidth = (fraction) * Game.tileWidth
             Game.ctx.drawImage tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth,
               pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
-              # else if tile.anim.type == 'return'
-              #   if elapsed < (Game.tileAnimDuration / 2)
-              #     fraction = elapsed / (Game.tileAnimDuration / 2)
-              #     renderWidth = (1-fraction) * Game.tileWidth
-              #     Game.ctx.drawImage tile.tileClass.image,, 0, 0, Game.tileHeight,
-              #       Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
-              #   else
-              #     fraction = elapsed / (Game.tileAnimDuration / 2 ) - 1
-              #     renderWidth = (fraction) * Game.tileWidth
-              #     Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth,
-              #       pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2,  pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+        else if tile.anim.type == 'return'
+
+          if elapsed < (Game.tileAnimDuration / 2)
+            fraction = elapsed / (Game.tileAnimDuration / 2)
+            renderWidth = (1-fraction) * Game.tileWidth
+            Game.ctx.drawImage tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
+          else
+            fraction = elapsed / (Game.tileAnimDuration / 2 ) - 1
+            renderWidth = (fraction) * Game.tileWidth
+            Game.ctx.drawImage Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth-renderWidth)/2,  pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight
 
       if elapsed > Game.tileAnimDuration
         tile.anim = null
@@ -187,6 +197,8 @@ Game.initEvents = () ->
             Game.emit 'wrong', Game
 
             newTurn = ->
+              Game.tile1.anim = {type:'return', start:(new Date).getTime()}
+              Game.tile2.anim = {type:'return', start:(new Date).getTime()}
               Game.tile1.turned = false
               Game.tile2.turned = false
               Game.state = GAME_STATE_TURN

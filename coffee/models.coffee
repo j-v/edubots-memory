@@ -1,9 +1,14 @@
 root = window
+root.Animatable = class Animatable
+  anim: null
+  animate: (type) ->
+    @anim = 
+      type: type
+      start: (new Date).getTime()
 
-root.Tile = class Tile
+root.Tile = class Tile extends Animatable
   constructor: (@tileClass) ->
     @turned = false
-    @anim = null
 
 
 root.TileClass = class TileClass

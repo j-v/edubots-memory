@@ -28,7 +28,7 @@
 
   GAME_DEFAULT_HEIGHT = 4;
 
-  GAME_BG_TILE_IMG = "bg.png";
+  GAME_BG_TILE_IMG = "bg2.png";
 
   Game.tileWidth = 150;
 
@@ -59,13 +59,13 @@
     });
     Game.width = params.width || GAME_DEFAULT_WIDTH;
     Game.height = params.height || GAME_DEFAULT_HEIGHT;
-    Game._matchesLeft = (Game.width * Game.height) / 2;
     return Game["new"]();
   };
 
   Game["new"] = function() {
-    var curTileIndex, i, tiles, _ref;
-    Game.started = false;
+    var animateTile, curTileIndex, i, shuffTiles, t, tile, tiles, _ref, _ref2;
+    Game.state = GAME_STATE_WAIT;
+    Game._matchesLeft = (Game.width * Game.height) / 2;
     Game.tile1 = null;
     Game.tile2 = null;
     Game.tileClasses = [new root.TileClass('t1.png'), new root.TileClass('t2.png'), new root.TileClass('t3.png'), new root.TileClass('t4.png')];
@@ -78,7 +78,27 @@
       if (curTileIndex === Game.tileClasses.length) curTileIndex = 0;
     }
     Game.tiles = shuffle(tiles);
-    return Game.state = GAME_STATE_TURN;
+    animateTile = function(tile, animType) {
+      return tile.animate(animType);
+    };
+    shuffTiles = shuffle((function() {
+      var _i, _len, _ref2, _results;
+      _ref2 = Game.tiles;
+      _results = [];
+      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+        t = _ref2[_i];
+        _results.push(t);
+      }
+      return _results;
+    })());
+    for (i = 0, _ref2 = shuffTiles.length - 1; 0 <= _ref2 ? i <= _ref2 : i >= _ref2; 0 <= _ref2 ? i++ : i--) {
+      tile = shuffTiles[i];
+      setTimeout(animateTile, i * 150, tile, 'turn');
+      setTimeout(animateTile, i * 150 + Game.tileAnimDuration, tile, 'return');
+    }
+    return setTimeout((function() {
+      return Game.state = GAME_STATE_TURN;
+    }), shuffTiles.length * 150 + Game.tileAnimDuration);
   };
 
   Game.getTile = function(x, y) {
@@ -114,6 +134,16 @@
                 fraction = elapsed / (Game.tileAnimDuration / 2) - 1;
                 renderWidth = fraction * Game.tileWidth;
                 Game.ctx.drawImage(tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth - renderWidth) / 2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight);
+              }
+            } else if (tile.anim.type === 'return') {
+              if (elapsed < (Game.tileAnimDuration / 2)) {
+                fraction = elapsed / (Game.tileAnimDuration / 2);
+                renderWidth = (1 - fraction) * Game.tileWidth;
+                Game.ctx.drawImage(tile.tileClass.image, 0, 0, Game.tileHeight, Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth - renderWidth) / 2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight);
+              } else {
+                fraction = elapsed / (Game.tileAnimDuration / 2) - 1;
+                renderWidth = fraction * Game.tileWidth;
+                Game.ctx.drawImage(Game.tileBgImage, 0, 0, Game.tileHeight, Game.tileWidth, pad + ((Game.tileWidth + pad) * x) + (Game.tileWidth - renderWidth) / 2, pad + ((Game.tileHeight + pad) * y), renderWidth, Game.tileHeight);
               }
             }
           }
@@ -198,6 +228,14 @@
             Game.state = GAME_STATE_WAIT;
             Game.emit('wrong', Game);
             newTurn = function() {
+              Game.tile1.anim = {
+                type: 'return',
+                start: (new Date).getTime()
+              };
+              Game.tile2.anim = {
+                type: 'return',
+                start: (new Date).getTime()
+              };
               Game.tile1.turned = false;
               Game.tile2.turned = false;
               Game.state = GAME_STATE_TURN;
